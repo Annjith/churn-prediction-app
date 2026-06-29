@@ -1,13 +1,37 @@
 import streamlit as st
 import pandas as pd
 import joblib
+from sklearn.base import BaseEstimator, ClassifierMixin
+
+class ThresholdClassifier(BaseEstimator, ClassifierMixin):
+    def __init__(self, pipeline, threshold=0.5):
+        self.pipeline = pipeline
+        self.threshold = threshold
+
+    def fit(self, X, y):
+        self.pipeline.fit(X, y)
+        return self
+
+    def predict(self, X):
+        proba = self.pipeline.predict_proba(X)[:, 1]
+        return (proba >= self.threshold).astype(int)
+
+    def predict_proba(self, X):
+        return self.pipeline.predict_proba(X)
+
+model = joblib.load('models/churn_model_final.pkl')
 
 model = joblib.load('models/churn_model_final.pkl')
 
 st.title("Customer Churn Predictor")
 st.write("Enter customer details to predict churn risk.")
 
-senior_citizen = st.selectbox("Senior Citizen", [0, 1])
+senior_citizen = st.selectbox("Senior Citizen", ["No", "Yes"])
+if senior_citizen == "No":
+    op = 0
+elif senior_citizen == "Yes":
+    op = 1
+
 partner = st.selectbox("Partner", ["No", "Yes"])
 dependents = st.selectbox("Dependents", ["No", "Yes"])
 tenure = st.slider("Tenure (months)", 0, 72, 12)
@@ -29,7 +53,7 @@ total_charges = st.number_input("Total Charges", min_value=0.0, value=1000.0)
 
 if st.button("Predict"):
     input_df = pd.DataFrame([{
-        'SeniorCitizen': senior_citizen, 'Partner': partner,
+        'SeniorCitizen': op, 'Partner': partner,
         'Dependents': dependents, 'tenure': tenure, 'PhoneService': phone_service,
         'MultipleLines': multiple_lines, 'InternetService': internet_service,
         'OnlineSecurity': online_security, 'OnlineBackup': online_backup,
